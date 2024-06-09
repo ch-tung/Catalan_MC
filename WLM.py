@@ -179,11 +179,11 @@ class WLChain:
     def corr_o(self):
         d = np.ceil(10**(np.arange(64)/8)).astype('int')
         d = d[d<self.N]
-        print(len(d))
+        # print(len(d))
         corr = np.zeros(len(d))
-        for i, d_i in enumerate(d):
-            print(i)
-            for j in range(self.N-d_i):
+        for i, d_i in enumerate(d): # separation along contour
+            # print(i)
+            for j in range(self.N-d_i): # starting from segment j
                 corr[i] = corr[i] + np.dot(self.n[:,j],self.n[:,j+d_i])
             corr[i] = corr[i]/(self.N-d_i)
             

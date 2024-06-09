@@ -10,6 +10,7 @@ rotation = f_rotation.rotation
 rotation_dihedral = f_rotation.rotation_dihedral
 # rotation_stretched = f_rotation.rotation_stretched
 
+
 def chain_Rayleigh(N, a, lambda_seg, unit_C, apply_SA=1, d_exc=1):
     """
     Modelling the polymer chain as a semi-flexible rod.
@@ -421,6 +422,40 @@ def grid_coords(grid):
         
     return r_n, r_opp
 
+def kappa_eff(l_p, grid, nonreverse=True):
+    r_n, r_opp = grid_coords(grid)
+    cos_i1 = r_n@r_n[0].T
+    theta_i1 = np.arccos(cos_i1)
+
+    def f_average(x, kappa):
+        # x(theta) is a fumction of theta
+        x_ave = np.sum(x*np.exp(-kappa/2*theta_i1**2))/np.sum(np.exp(-kappa/2*theta_i1**2))
+        return x_ave
+
+    def f_average_nonrev(x, kappa):
+        # x(theta) is a fumction of theta
+        x_ave = np.sum((x*np.exp(-kappa/2*theta_i1**2))[cos_i1>-1])/np.sum(np.exp(-kappa/2*theta_i1**2)[cos_i1>-1])
+        return x_ave
+    
+    # get the relation between bending energy and chain persistence
+    kappa_list = np.logspace(-2,2,200)
+    if nonreverse:
+        f_ave = f_average_nonrev
+    else:
+        f_ave = f_average
+
+    cos_ave = np.array([f_ave(cos_i1, k) for k in kappa_list])
+    sigma = 1e-12
+    lp_ave_list = -1/(np.log(cos_ave)-sigma)
+
+    # obtain the corresponding kappa_eff from interpolation
+    i_finite = np.isfinite(lp_ave_list)
+    # f_interp = interpolate.PchipInterpolator(lp_ave_list, kappa_list)
+    # kap_eff = f_interp(l_p)
+    kap_eff = np.interp(l_p, lp_ave_list[i_finite], kappa_list[i_finite])
+
+    return kap_eff
+
 import random
 def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
     """
@@ -479,7 +514,8 @@ def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
     for i in range(len(r_n)):
         # E_phi = kappa/2*(sin_ij2[iz,:])
         # E_x = -epsilon*(cos_ij[0,:])
-        E_phi = kappa/2*((np.arccos(cos_ij[i,:])/np.pi*2)**2)
+        kap_eff = kappa_eff(kappa,grid)
+        E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
         E_x = -epsilon*(r_n[:,0])
         
         E = E_phi + E_x
@@ -577,7 +613,8 @@ def chain_grid_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=0, grid='SC
     for i in range(len(r_n)):
         # E_phi = kappa/2*(sin_ij2[iz,:])
         # E_x = -epsilon*(cos_ij[0,:])
-        E_phi = kappa/2*((np.arccos(cos_ij[i,:])/np.pi*2)**2)
+        kap_eff = kappa_eff(kappa,grid)
+        E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
         E_x = -epsilon*(r_n[:,0])
         
         E = E_phi + E_x
@@ -685,7 +722,8 @@ def chain_grid_shear(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='S
                 for iz in range(len(r_n)):
                     # E_phi = kappa/2*(sin_ij2[iz,:])
                     # E_x = -epsilon*(cos_ij[0,:])*l[1,i-1]
-                    E_phi = kappa/2*((np.arccos(cos_ij[iz,:])/np.pi*2)**2)
+                    kap_eff = kappa_eff(kappa,grid)
+                    E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
                     E_x = -epsilon*(r_n[:,0])*l[1,i-1]
                     
                     E = E_phi + E_x
@@ -815,7 +853,8 @@ def chain_grid_shear_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, gr
                 for iz in range(len(r_n)):
                     # E_phi = kappa/2*(sin_ij2[iz,:])
                     # E_x = -epsilon*(cos_ij[0,:])*l[1,i-1]
-                    E_phi = kappa/2*((np.arccos(cos_ij[iz,:])/np.pi*2)**2)
+                    kap_eff = kappa_eff(kappa,grid)
+                    E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
                     E_x = -epsilon*(r_n[:,0])*l[1,i-1]
                     
                     E = E_phi + E_x
