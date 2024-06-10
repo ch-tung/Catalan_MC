@@ -676,79 +676,50 @@ class WLChain:
             n_merge: int
                 merge consecutive n_merge beads into one bead
         """
-        
+    
         N = self.N
-        # chain_box = self.box
+        N_merge = N // n_merge
+        Cc_merge = self.Cc.reshape(3, N_merge, n_merge).mean(axis=2)
         
-        # merge beads
-        N_merge = int(N/n_merge)
-        Cc_merge = np.zeros((3,N_merge))
-        for i in range(N_merge):
-            Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
-            
-        print('{:d} beads used to calculate S(q)'.format(Cc_merge.shape[1]))
-
-        # two-point correlation
-        n_list = N_merge
-        # r_jk = self.Cc.T.reshape(n_list,1,3) - self.Cc.T.reshape(1,n_list,3)
-        r_jk = Cc_merge.T.reshape(n_list,1,3) - Cc_merge.T.reshape(1,n_list,3)
-        d_jk = np.sqrt(np.sum(r_jk**2,axis=2))
-        d_jk_list = d_jk[d_jk!=0]
-        r_jk_list = np.zeros((len(d_jk_list),3))
-        for i in range(3):
-            r_jk_i = r_jk[:,:,i]
-            r_jk_list[:,i] = r_jk_i[d_jk!=0]
+        print(f'{N_merge} beads used to calculate S(q)')
+        
+        # Two-point correlation
+        r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
+        d_jk = np.linalg.norm(r_jk, axis=2)
+        nonzero_mask = d_jk != 0
+        d_jk_list = d_jk[nonzero_mask]
+        r_jk_list = r_jk[nonzero_mask]
         
         nq = len(qq)
         
-        '''
-        2D spectrum along 
-        velocity gradient–vorticity(y–z), flow–vorticity (x–z), and flow–velocity gradient (x–y) planes
-        '''
+        # 2D spectrum along three planes
+        S_q_2D = np.zeros((2*nq+1, 2*nq+1, 3))
+        qq_2D = np.concatenate((-np.flip(qq), [0.0], qq))
+        i_axes_list = [[1, 2], [0, 2], [0, 1]]
         
-        def abs2(x):
-            return x.real**2 + x.imag**2
-        
-        S_q_2D = np.zeros((int(nq)*2+1,int(nq)*2+1,3))
-        qq_2D = np.concatenate((-np.flip(qq), np.array([0.0]), qq))
-        i_axes_list = [[1,2],[0,2],[0,1]]
         for i, i_axes in enumerate(i_axes_list):
-            print('{:01d}{:01d} plane'.format(i_axes[0]+1,i_axes[1]+1))
-            for iqx in range(len(qq_2D)):
-                qqx = qq_2D[iqx]
-                for iqy in range(len(qq)+1):
-                    qqy = qq_2D[iqy]
-                    # if (qqx*2+qqy**2) != 0:
-                    qr_xy = qqx*r_jk_list[:,i_axes[0]] + qqy*r_jk_list[:,i_axes[1]]
-                    # sinqr_qr_2D = np.sin(qr_xy)/(qr_xy)
-                    # S_q_2D[iqx,iqy,i] = np.sum(sinqr_qr_2D[np.isnan(sinqr_qr_2D)==0])
-                    phi = np.exp((-1.j)*qr_xy)
-                    S_q_2D[iqx,iqy,i] = abs2(np.mean(phi))
+            print(f'{i_axes[0]+1}{i_axes[1]+1} plane')
+            for iqx, qqx in enumerate(qq_2D):
+                qr_x = qqx * r_jk_list[:, i_axes[0]]
+                for iqy, qqy in enumerate(qq_2D):
+                    qr_xy = qr_x + qqy * r_jk_list[:, i_axes[1]]
+                    phi = np.exp(-1j * qr_xy)
+                    S_q_2D[iqx, iqy, i] = np.abs(np.mean(phi))
             
-            # S(q) = S(-q)
-            for iqx in range(len(qq_2D)):
-                for iqy in range(len(qq_2D)):
-                    qqy = qq_2D[iqy]
-                    if qqy>0:
-                        S_q_2D[iqx,iqy,i] = S_q_2D[len(qq_2D)-1-iqx,len(qq_2D)-1-iqy,i]
-                        
-            # S_q_2D[:,:,i] = S_q_2D[:,:,i]/N_merge**2
-            # S_q_2D[len(qq),len(qq),i] = 1
-            
+            # Symmetry S(q) = S(-q)
+            S_q_2D[:, :, i] = (S_q_2D[:, :, i] + S_q_2D[::-1, ::-1, i]) / 2
+        
         self.qq_2D = qq_2D
         self.S_q_2D = S_q_2D
-            
-                                    
-        '''
-        1D spectrum
-        '''
-        S_q = np.zeros(int(nq))
-        for iq in range(int(nq)):
-            sinqr_qr = np.sin(qq[iq]*d_jk_list)/(qq[iq]*d_jk_list)
-            S_q[iq] = np.sum(sinqr_qr[np.isnan(sinqr_qr)==0])
         
-        S_q = S_q/N_merge**2
-            
+        # 1D spectrum
+        S_q = np.zeros(nq)
+        for iq in range(nq):
+            sinqr_qr = np.sin(qq[iq] * d_jk_list) / (qq[iq] * d_jk_list)
+            S_q[iq] = np.nansum(sinqr_qr)  # Use np.nansum to ignore NaNs
+        
+        S_q /= N_merge**2
+        
         self.qq = qq
         self.S_q = S_q
         
