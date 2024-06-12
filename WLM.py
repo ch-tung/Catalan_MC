@@ -697,13 +697,13 @@ class WLChain:
         d_jk_list = d_jk[nonzero_mask]
         r_jk_list = r_jk[nonzero_mask]
 
-        from numpy.random import choice
-        if len(d_jk_list)<n_choice:
-            n_choice = len(d_jk_list)
+        # from numpy.random import choice
+        # if len(d_jk_list)<n_choice:
+        #     n_choice = len(d_jk_list)
             
-        i_choice = choice(np.arange(len(d_jk_list)),size=n_choice, replace=False)
-        r_jk_list = r_jk_list[i_choice]
-        d_jk_list = d_jk_list[i_choice]
+        # i_choice = choice(np.arange(len(d_jk_list)),size=n_choice, replace=False)
+        # r_jk_list = r_jk_list[i_choice]
+        # d_jk_list = d_jk_list[i_choice]
         # i_d_jk_list = d_jk_list*np.max(qq)<50
         # r_jk_list = r_jk_list[i_d_jk_list]
         # d_jk_list = d_jk_list[i_d_jk_list]
@@ -718,29 +718,56 @@ class WLChain:
         def abs2(x):
             return x.real**2 + x.imag**2
 
-        qqx, qqy = np.meshgrid(qq_2D, qq_2D)
+        # qqx, qqy = np.meshgrid(qq_2D, qq_2D)
         
+        empty_phi = np.empty((2*nq+1, 2*nq+1, len(d_jk_list)), dtype=np.complex64)
         for i, i_axes in enumerate(i_axes_list):
             print(f'{i_axes[0]+1}{i_axes[1]+1} plane')
+
+            qr_x = np.outer(qq_2D, r_jk_list[:, i_axes[0]])
+            qr_y_pos = np.outer(qq, r_jk_list[:, i_axes[1]])  # positive y part
+            
+            phi_x = np.exp(-1j * qr_x)
+            phi_y_pos = np.exp(-1j * qr_y_pos)
+
+            phi_half = np.einsum('ij,kj->ikj', phi_x, phi_y_pos)
+            
+            # Preallocate phi array and fill it
+            phi = empty_phi.copy()
+            
+            phi[:, :nq, :] = np.flip(phi_half, axis=[0,1])
+            phi[:, nq, :] = phi_x
+            phi[:, nq+1:, :] = phi_half
+            S_q_2D[:,:,i] = abs2(np.mean(phi,axis=2))
+
+            # qr_x = np.outer(qq_2D, r_jk_list[:, i_axes[0]])
+            # qr_y = np.outer(qq_2D, r_jk_list[:, i_axes[1]])
+            
+            # phi_x = np.exp(-1j * qr_x)
+            # phi_y = np.exp(-1j * qr_y)
+
+            # phi = np.einsum('ij,kj->ikj', phi_x, phi_y)
+
+            # S_q_2D[:,:,i] = abs2(np.mean(phi,axis=2))
 
             # qr_xy = np.outer(qqx.flatten(),r_jk_list[:, i_axes[0]]) + np.outer(qqy.flatten(),r_jk_list[:, i_axes[1]])
             # phi = np.exp(-1j * qr_xy)
             # S_q_2D[:,:,i] = abs2(np.mean(phi,axis=1)).reshape(qqx.shape)
 
-            for iqx, qqx in enumerate(qq_2D):
-                qr_x = qqx * r_jk_list[:, i_axes[0]]
-                for iqy in range(len(qq)+1):
-                    qqy = qq_2D[iqy]
-                    qr_xy = qr_x + qqy * r_jk_list[:, i_axes[1]]
-                    phi = np.exp(-1j * qr_xy)
-                    S_q_2D[iqx, iqy, i] = abs2(np.mean(phi))
+            # for iqx, qqx in enumerate(qq_2D):
+            #     qr_x = qqx * r_jk_list[:, i_axes[0]]
+            #     for iqy in range(len(qq)+1):
+            #         qqy = qq_2D[iqy]
+            #         qr_xy = qr_x + qqy * r_jk_list[:, i_axes[1]]
+            #         phi = np.exp(-1j * qr_xy)
+            #         S_q_2D[iqx, iqy, i] = abs2(np.mean(phi))
             
-            # Symmetry S(q) = S(-q)
-            for iqx in range(len(qq_2D)):
-                for iqy in range(len(qq_2D)):
-                    qqy = qq_2D[iqy]
-                    if qqy>0:
-                        S_q_2D[iqx,iqy,i] = S_q_2D[len(qq_2D)-1-iqx,len(qq_2D)-1-iqy,i]
+            # # Symmetry S(q) = S(-q)
+            # for iqx in range(len(qq_2D)):
+            #     for iqy in range(len(qq_2D)):
+            #         qqy = qq_2D[iqy]
+            #         if qqy>0:
+            #             S_q_2D[iqx,iqy,i] = S_q_2D[len(qq_2D)-1-iqx,len(qq_2D)-1-iqy,i]
         
         self.qq_2D = qq_2D
         self.S_q_2D = S_q_2D
@@ -751,8 +778,8 @@ class WLChain:
             sinqr_qr = np.sin(qq[iq] * d_jk_list) / (qq[iq] * d_jk_list)
             S_q[iq] = np.nansum(sinqr_qr)  # Use np.nansum to ignore NaNs
         
-        # S_q /= N_merge**2
-        S_q /= n_choice
+        S_q /= N_merge**2
+        # S_q /= n_choice
         
         self.qq = qq
         self.S_q = S_q
