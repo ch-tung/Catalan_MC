@@ -688,8 +688,6 @@ class WLChain:
         for i in range(N_merge):
             Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
         
-        print(f'{N_merge} beads used to calculate S(q)')
-        
         # Two-point correlation
         r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
         d_jk = np.linalg.norm(r_jk, axis=2)
@@ -698,6 +696,7 @@ class WLChain:
         r_jk_list = r_jk[nonzero_mask]
 
         n_pair = len(d_jk_list)
+        print(f'{N_merge} beads and {n_pair} pairs used to calculate S(q)')
         # from numpy.random import choice
         # if n_pair<n_choice:
         #     n_choice = n_pair
@@ -742,7 +741,7 @@ class WLChain:
             phi[:, :nq, :] = np.flip(phi_half, axis=[0,1])
             phi[:, nq, :] = phi_x
             phi[:, nq+1:, :] = phi_half
-            S_q_2D[:,:,i] = abs2(np.sum(phi,axis=2))/n_pair
+            S_q_2D[:,:,i] = abs2(np.sum(phi,axis=2))/n_pair**2
 
             # qr_x = np.outer(qq_2D, r_jk_list[:, i_axes[0]])
             # qr_y = np.outer(qq_2D, r_jk_list[:, i_axes[1]])
@@ -788,9 +787,47 @@ class WLChain:
         self.qq = qq
         self.S_q = S_q
         
-    def scatter_direct_RSHE(self, qq, rr=[], n_merge=1, calculate_g_r=0):
+    def scatter_direct_RSHE_old(self, qq, rr=[], lm=[(0,0),(2,0),(4,0)], n_merge=1, calculate_g_r=False):
         """
-        Calculate scattering function.
+        Calculate scattering function. (new function available)
+        
+        Args:
+            qq: array
+                wave vectors
+            rr: array
+                pair distances
+            lm: list of tuples
+                degree and order
+            n_merge: int
+                merge consecutive n_merge beads into one bead
+            calculate_g_r: 0 or 1
+                if 1, calculate the RSHE of real space correlations
+        """
+        
+        N = self.N
+
+        # merge beads
+        N_merge = int(N/n_merge)
+        Cc_merge = np.zeros((3,N_merge))
+        for i in range(N_merge):
+            Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
+        
+        print(f'{N_merge} beads used to calculate S(q)')
+        
+        # Two-point correlation
+        r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
+        d_jk = np.linalg.norm(r_jk, axis=2)
+        nonzero_mask = d_jk != 0
+        d_jk_list = d_jk[nonzero_mask]
+        r_jk_list = r_jk[nonzero_mask]
+
+        n_pair = len(d_jk_list)
+        nq = len(qq)
+        
+        
+    def scatter_direct_RSHE_old(self, qq, rr=[], n_merge=1, calculate_g_r=False):
+        """
+        Calculate scattering function. (new function available)
         
         Args:
             qq: array
