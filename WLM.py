@@ -688,8 +688,6 @@ class WLChain:
         for i in range(N_merge):
             Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
         
-        print(f'{N_merge} beads used to calculate S(q)')
-        
         # Two-point correlation
         r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
         d_jk = np.linalg.norm(r_jk, axis=2)
@@ -697,11 +695,13 @@ class WLChain:
         d_jk_list = d_jk[nonzero_mask]
         r_jk_list = r_jk[nonzero_mask]
 
+        n_pair = len(d_jk_list)
+        print(f'{N_merge} beads and {n_pair} pairs used to calculate S(q)')
         # from numpy.random import choice
-        # if len(d_jk_list)<n_choice:
-        #     n_choice = len(d_jk_list)
+        # if n_pair<n_choice:
+        #     n_choice = n_pair
             
-        # i_choice = choice(np.arange(len(d_jk_list)),size=n_choice, replace=False)
+        # i_choice = choice(np.arange(n_pair),size=n_choice, replace=False)
         # r_jk_list = r_jk_list[i_choice]
         # d_jk_list = d_jk_list[i_choice]
         # i_d_jk_list = d_jk_list*np.max(qq)<50
@@ -720,12 +720,15 @@ class WLChain:
 
         # qqx, qqy = np.meshgrid(qq_2D, qq_2D)
         
-        empty_phi = np.empty((2*nq+1, 2*nq+1, len(d_jk_list)), dtype=np.complex64)
+        empty_phi = np.empty((2*nq+1, 2*nq+1, n_pair), dtype=np.complex64)
         for i, i_axes in enumerate(i_axes_list):
             print(f'{i_axes[0]+1}{i_axes[1]+1} plane')
 
             qr_x = np.outer(qq_2D, r_jk_list[:, i_axes[0]])
             qr_y_pos = np.outer(qq, r_jk_list[:, i_axes[1]])  # positive y part
+            
+            phi_x = np.zeros_like(qr_x,dtype=np.complex64)
+            phi_y_pos = np.zeros_like(qr_y_pos,dtype=np.complex64)
             
             phi_x = np.exp(-1j * qr_x)
             phi_y_pos = np.exp(-1j * qr_y_pos)
@@ -738,7 +741,7 @@ class WLChain:
             phi[:, :nq, :] = np.flip(phi_half, axis=[0,1])
             phi[:, nq, :] = phi_x
             phi[:, nq+1:, :] = phi_half
-            S_q_2D[:,:,i] = abs2(np.mean(phi,axis=2))
+            S_q_2D[:,:,i] = abs2(np.sum(phi,axis=2))/n_pair**2
 
             # qr_x = np.outer(qq_2D, r_jk_list[:, i_axes[0]])
             # qr_y = np.outer(qq_2D, r_jk_list[:, i_axes[1]])
@@ -778,15 +781,53 @@ class WLChain:
             sinqr_qr = np.sin(qq[iq] * d_jk_list) / (qq[iq] * d_jk_list)
             S_q[iq] = np.nansum(sinqr_qr)  # Use np.nansum to ignore NaNs
         
-        S_q /= N_merge**2
+        S_q /= n_pair
         # S_q /= n_choice
         
         self.qq = qq
         self.S_q = S_q
         
-    def scatter_direct_RSHE(self, qq, rr=[], n_merge=1, calculate_g_r=0):
+    def scatter_direct_RSHE_old(self, qq, rr=[], lm=[(0,0),(2,0),(4,0)], n_merge=1, calculate_g_r=False):
         """
-        Calculate scattering function.
+        Calculate scattering function. (new function available)
+        
+        Args:
+            qq: array
+                wave vectors
+            rr: array
+                pair distances
+            lm: list of tuples
+                degree and order
+            n_merge: int
+                merge consecutive n_merge beads into one bead
+            calculate_g_r: 0 or 1
+                if 1, calculate the RSHE of real space correlations
+        """
+        
+        N = self.N
+
+        # merge beads
+        N_merge = int(N/n_merge)
+        Cc_merge = np.zeros((3,N_merge))
+        for i in range(N_merge):
+            Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
+        
+        print(f'{N_merge} beads used to calculate S(q)')
+        
+        # Two-point correlation
+        r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
+        d_jk = np.linalg.norm(r_jk, axis=2)
+        nonzero_mask = d_jk != 0
+        d_jk_list = d_jk[nonzero_mask]
+        r_jk_list = r_jk[nonzero_mask]
+
+        n_pair = len(d_jk_list)
+        nq = len(qq)
+        
+        
+    def scatter_direct_RSHE_old(self, qq, rr=[], n_merge=1, calculate_g_r=False):
+        """
+        Calculate scattering function. (new function available)
         
         Args:
             qq: array
