@@ -12,6 +12,127 @@ import numpy.matlib
 import matplotlib.pyplot as plt
 # from scipy import interpolate
 #import time
+from scipy.special import spherical_jn, lpmv, sph_harm
+from math import factorial, sqrt, pi
+
+from functools import lru_cache
+@lru_cache(maxsize=None)
+def delta(m, n):
+    return 1 if m == n else 0
+@lru_cache(maxsize=None)
+def normalization(l, m):
+    return np.sqrt((2 - delta(m, 0)) * (2 * l + 1) * factorial(l - m) / (4 * np.pi * factorial(l + m)))
+
+# @lru_cache(maxsize=None)
+def legendre_poly(m, l, cos_theta):
+    return lpmv(m, l, cos_theta)
+
+def rsh(l, m, x, y, z):
+    r2 = x * x + y * y + z * z
+    r = np.sqrt(r2)
+    theta = np.arccos(z / r)
+    phi = np.arctan2(y, x)
+    Y_l_m = 0.0
+    if m > 0:
+        Y_l_m = np.sqrt(2) * normalization(l, m) * legendre_poly(m, l, np.cos(theta)) * np.cos(m * phi)
+    elif m == 0:
+        Y_l_m = normalization(l, m) * legendre_poly(m, l, np.cos(theta))
+    else:
+        Y_l_m = np.sqrt(2) * normalization(l, -m) * legendre_poly(-m, l, np.cos(theta)) * np.sin(-m * phi)
+    return Y_l_m
+
+def sh(l, m, theta, phi):
+    Y_l_m = 0.0
+    if m > 0:
+        Y_l_m = np.sqrt(2) * normalization(l, m) * legendre_poly(m, l, np.cos(theta)) * np.cos(m * phi)
+    elif m == 0:
+        Y_l_m = normalization(l, m) * legendre_poly(m, l, np.cos(theta))
+    else:
+        Y_l_m = np.sqrt(2) * normalization(l, -m) * legendre_poly(-m, l, np.cos(theta)) * np.sin(-m * phi)
+    return Y_l_m
+
+# def rsh(l, m, x, y, z):
+#     """
+#     Evaluate the real spherical harmonics Y_{l,m}(x,y,z).
+
+#     Args:
+#     l : int
+#         Degree of the spherical harmonic.
+#     m : int
+#         Order of the spherical harmonic.
+#     x : float
+#         Cartesian x-coordinate.
+#     y : float
+#         Cartesian y-coordinate.
+#     z : float
+#         Cartesian z-coordinate.
+
+#     Returns:
+#     float
+#         Value of the real spherical harmonic Y_{l,m}(x,y,z).
+#     """
+
+#     # Compute r², avoiding redundant sqrt calculations
+#     r2 = x**2 + y**2 + z**2
+#     # if r2 == 0:
+#     #     return 0.0  # Handle the origin case
+
+#     # Compute spherical coordinates
+#     r = np.sqrt(r2)
+#     theta = np.arccos(z / r)  # polar angle
+#     phi = np.arctan2(y, x)    # azimuthal angle
+
+#     # Compute the normalization constant
+#     normalization_factor = (-1j)**m * np.sqrt((2 * l + 1) / (4 * pi) * factorial(l - abs(m)) / factorial(l + abs(m)))
+
+#     # Compute the associated Legendre polynomial
+#     P_l_m = lpmv(abs(m), l, np.cos(theta))
+
+#     # Compute the real spherical harmonic
+#     if m > 0:
+#         Y_l_m = np.sqrt(2) * normalization_factor * P_l_m * np.cos(m * phi)
+#     elif m == 0:
+#         Y_l_m = normalization_factor * P_l_m
+#     else:  # m < 0
+#         Y_l_m = np.sqrt(2) * normalization_factor * P_l_m * np.sin(abs(m) * phi)
+
+#     return Y_l_m
+
+# def sh(l, m, x, y, z):
+#     """
+#     Evaluate the complex spherical harmonics Y_{l,m}(x,y,z).
+
+#     Args:
+#     l : int
+#         Degree of the spherical harmonic.
+#     m : int
+#         Order of the spherical harmonic.
+#     x : float
+#         Cartesian x-coordinate.
+#     y : float
+#         Cartesian y-coordinate.
+#     z : float
+#         Cartesian z-coordinate.
+
+#     Returns:
+#     complex
+#         Value of the spherical harmonic Y_{l,m}(x,y,z).
+#     """
+    
+#     # Compute r² to avoid redundant sqrt calculations
+#     r2 = x**2 + y**2 + z**2
+#     # if r2 == 0:
+#     #     return 0.0  # Handle the origin case
+
+#     # Compute spherical coordinates
+#     r = np.sqrt(r2)
+#     theta = np.arccos(z / r)  # polar angle
+#     phi = np.arctan2(y, x)    # azimuthal angle
+
+#     # Calculate the spherical harmonics
+#     Y_l_m = sph_harm(m, l, phi, theta)
+    
+#     return Y_l_m
 
 #%% define functions
 import f_rotation
@@ -696,7 +817,7 @@ class WLChain:
         r_jk_list = r_jk[nonzero_mask]
 
         n_pair = len(d_jk_list)
-        print(f'{N_merge} beads and {n_pair} pairs used to calculate S(q)')
+        # print(f'{N_merge} beads and {n_pair} pairs used to calculate S(q)')
         # from numpy.random import choice
         # if n_pair<n_choice:
         #     n_choice = n_pair
@@ -722,7 +843,7 @@ class WLChain:
         
         empty_phi = np.empty((2*nq+1, 2*nq+1, n_pair), dtype=np.complex64)
         for i, i_axes in enumerate(i_axes_list):
-            print(f'{i_axes[0]+1}{i_axes[1]+1} plane')
+            # print(f'{i_axes[0]+1}{i_axes[1]+1} plane')
 
             qr_x = np.outer(qq_2D, r_jk_list[:, i_axes[0]])
             qr_y_pos = np.outer(qq, r_jk_list[:, i_axes[1]])  # positive y part
@@ -786,10 +907,11 @@ class WLChain:
         
         self.qq = qq
         self.S_q = S_q
-        
-    def scatter_direct_RSHE_old(self, qq, rr=[], lm=[(0,0),(2,0),(4,0)], n_merge=1, calculate_g_r=False):
+    
+    
+    def scatter_direct_SHE(self, qq, rr=[], lm=[(0,0),(2,0),(4,0)], n_merge=1, calculate_g_r=False, real = True):
         """
-        Calculate scattering function. (new function available)
+        Calculate scattering function. 
         
         Args:
             qq: array
@@ -801,7 +923,10 @@ class WLChain:
             n_merge: int
                 merge consecutive n_merge beads into one bead
             calculate_g_r: 0 or 1
-                if 1, calculate the RSHE of real space correlations
+                if 1, calculate the SHE of real space correlations, 
+                otherwise it will still return zero array with the shape of rr.
+            real: 0 or 1
+                if 1, calculate the real SHE
         """
         
         N = self.N
@@ -812,7 +937,7 @@ class WLChain:
         for i in range(N_merge):
             Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
         
-        print(f'{N_merge} beads used to calculate S(q)')
+        # print(f'{N_merge} beads used to calculate S(q)')
         
         # Two-point correlation
         r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
@@ -821,10 +946,38 @@ class WLChain:
         d_jk_list = d_jk[nonzero_mask]
         r_jk_list = r_jk[nonzero_mask]
 
-        n_pair = len(d_jk_list)
+        # n_pair = len(d_jk_list)
         nq = len(qq)
+        nr = len(rr)
         
+        f_sh = sh if not real else rsh
         
+        S_q_lm = np.zeros((int(nq),len(lm)), dtype='complex_')
+        g_r_lm = np.zeros((int(nr),len(lm)), dtype='complex_')
+        for i, lm_i in enumerate(lm):
+            l = lm_i[0]
+            m = lm_i[1]
+            factors = [1, 1j, -1, -1j]
+            factor = factors[l % 4]          
+            # print(f'l={l}, m={m}')
+            
+            Y_lm_r_jk = f_sh(l,m,r_jk_list[:,2],r_jk_list[:,0],r_jk_list[:,1]) # spherical harmonic
+            for iq in range(int(nq)):
+                jl_qr = spherical_jn(l, qq[iq]*d_jk_list) # radial
+                S_q_lm[iq,i] = factor * np.mean(jl_qr * Y_lm_r_jk)
+                
+            if calculate_g_r == 1:
+                for ir in range(int(nr)):
+                    if ir == 0:
+                        continue
+                    index_r = (d_jk_list>rr[ir-1])&(d_jk_list<rr[ir])
+                    # n_r = np.sum(index_r)
+                    d_r = rr[ir]-rr[ir-1]
+                    g_r_lm[ir,i] = np.sum(Y_lm_r_jk[index_r])/d_r/((rr[ir]+rr[ir-1])/2)**2/4/np.pi
+            
+        self.S_q_lm = S_q_lm
+        self.g_r_lm = g_r_lm
+
     def scatter_direct_RSHE_old(self, qq, rr=[], n_merge=1, calculate_g_r=False):
         """
         Calculate scattering function. (new function available)
