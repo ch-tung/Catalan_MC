@@ -88,7 +88,7 @@ n_r = 51
 qq = (np.logspace(-1,3,n_q))/N_backbone
 rr = (np.arange(n_r))*2
 
-lm=[(0,0),(2,0),(4,0)]
+lm=[(0,0),(2,0),(4,0),(6,0)]
 
 parameters_list = []
 S_q_lm_list_param = []
@@ -109,5 +109,5 @@ for kappa in kappa_list:
         S_q_lm_list_param = np.array(S_q_lm_list_param)
         g_r_lm_list_param = np.array(g_r_lm_list_param)
         mdic = {"S_q_lm_list_param":S_q_lm_list_param, "g_r_lm_list_param":g_r_lm_list_param, "qq":qq, "rr":rr, "parameters_list":parameters_list}
-        savemat("sq_lm_64_{},{}.mat".format(kappa,epsilon),mdic)
+        savemat("sq_lm_{}_{}_{}.mat".format(n_sample,kappa,epsilon),mdic)
 
