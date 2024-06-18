@@ -80,10 +80,10 @@ chain.apply_SA = 1
 chain.d_exc = 0.1
 chain.f = 0.0
 
-kappa_list = np.array([10])
+kappa_list = np.array([50])
 epsilon_list = [0]
 
-n_q = 25
+n_q = 41
 n_r = 51
 qq = (np.logspace(-1,3,n_q))/N_backbone
 rr = (np.arange(n_r))*2
@@ -102,7 +102,7 @@ for kappa in kappa_list:
         chain.epsilon = epsilon
 
         S_q_lm_list, g_r_lm_list= eval_sq_SHE(kappa, epsilon, chain, qq, rr, lm,
-                                 n_sample = 64, n_merge = 1, rayleigh=True, calculate_g_r=True, real=True)
+                                 n_sample = 128, n_merge = 1, rayleigh=True, calculate_g_r=True, real=True)
         S_q_lm_list_param.append(S_q_lm_list)
         g_r_lm_list_param.append(g_r_lm_list)
         
