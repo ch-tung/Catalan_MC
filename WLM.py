@@ -11,7 +11,7 @@ import numpy.matlib
 #from scipy.io import savemat
 import matplotlib.pyplot as plt
 # from scipy import interpolate
-#import time
+import time
 from scipy.special import spherical_jn, lpmv, sph_harm
 from math import factorial, sqrt, pi
 
@@ -30,25 +30,29 @@ def legendre_poly(m, l, cos_theta):
 def rsh(l, m, x, y, z):
     r2 = x * x + y * y + z * z
     r = np.sqrt(r2)
-    theta = np.arccos(z / r)
+    cos_theta = (z / r)
     phi = np.arctan2(y, x)
     Y_l_m = 0.0
     if m > 0:
-        Y_l_m = np.sqrt(2) * normalization(l, m) * legendre_poly(m, l, np.cos(theta)) * np.cos(m * phi)
+        Y_l_m = np.sqrt(2) * normalization(l, m) * legendre_poly(m, l, cos_theta) * np.cos(m * phi)
     elif m == 0:
-        Y_l_m = normalization(l, m) * legendre_poly(m, l, np.cos(theta))
+        Y_l_m = normalization(l, m) * legendre_poly(m, l, cos_theta)
     else:
-        Y_l_m = np.sqrt(2) * normalization(l, -m) * legendre_poly(-m, l, np.cos(theta)) * np.sin(-m * phi)
+        Y_l_m = np.sqrt(2) * normalization(l, -m) * legendre_poly(-m, l, cos_theta) * np.sin(-m * phi)
     return Y_l_m
 
-def sh(l, m, theta, phi):
+def sh(l, m, x, y, z):
+    r2 = x * x + y * y + z * z
+    r = np.sqrt(r2)
+    cos_theta = (z / r)
+    phi = np.arctan2(y, x)
     Y_l_m = 0.0
     if m > 0:
-        Y_l_m = np.sqrt(2) * normalization(l, m) * legendre_poly(m, l, np.cos(theta)) * np.cos(m * phi)
+        Y_l_m = np.sqrt(2) * normalization(l, m) * legendre_poly(m, l, cos_theta) * np.cos(m * phi)
     elif m == 0:
-        Y_l_m = normalization(l, m) * legendre_poly(m, l, np.cos(theta))
+        Y_l_m = normalization(l, m) * legendre_poly(m, l, cos_theta)
     else:
-        Y_l_m = np.sqrt(2) * normalization(l, -m) * legendre_poly(-m, l, np.cos(theta)) * np.sin(-m * phi)
+        Y_l_m = np.sqrt(2) * normalization(l, -m) * legendre_poly(-m, l, cos_theta) * np.sin(-m * phi)
     return Y_l_m
 
 # def rsh(l, m, x, y, z):
@@ -910,74 +914,68 @@ class WLChain:
     
     
     def scatter_direct_SHE(self, qq, rr=[], lm=[(0,0),(2,0),(4,0)], n_merge=1, calculate_g_r=False, real = True):
-        """
-        Calculate scattering function. 
-        
-        Args:
-            qq: array
-                wave vectors
-            rr: array
-                pair distances
-            lm: list of tuples
-                degree and order
-            n_merge: int
-                merge consecutive n_merge beads into one bead
-            calculate_g_r: 0 or 1
-                if 1, calculate the SHE of real space correlations, 
-                otherwise it will still return zero array with the shape of rr.
-            real: 0 or 1
-                if 1, calculate the real SHE
-        """
-        
         N = self.N
-
-        # merge beads
         N_merge = int(N/n_merge)
-        Cc_merge = np.zeros((3,N_merge))
-        for i in range(N_merge):
-            Cc_merge[:,i] = np.mean(self.Cc[:,i*n_merge:(i*n_merge+n_merge)],axis=1)
-        
-        # print(f'{N_merge} beads used to calculate S(q)')
-        
-        # Two-point correlation
+        Cc_merge = np.mean(self.Cc[:, :N_merge*n_merge].reshape(3, N_merge, n_merge), axis=2)
+
         r_jk = Cc_merge.T[:, np.newaxis, :] - Cc_merge.T[np.newaxis, :, :]
         d_jk = np.linalg.norm(r_jk, axis=2)
         nonzero_mask = d_jk != 0
         d_jk_list = d_jk[nonzero_mask]
         r_jk_list = r_jk[nonzero_mask]
 
-        # n_pair = len(d_jk_list)
         nq = len(qq)
         nr = len(rr)
         
         f_sh = sh if not real else rsh
         
+        d_bins = np.arange(N*10)/10 # Create bins for d_jk_list
+        bin_indices = np.digitize(d_jk_list, d_bins) # Assign each element of d_jk_list to a bi
+        qrb = qq[:, np.newaxis]*d_bins # Calculate qrb for each q and bin
+        jl_qr = np.zeros([len(qq),len(d_jk_list)]) # Initialize jl_qr as a zero array with shape (len(qq), len(d_jk_list))
+
+        # qr = qq[:, np.newaxis]*d_jk_list
+        
         S_q_lm = np.zeros((int(nq),len(lm)), dtype='complex_')
         g_r_lm = np.zeros((int(nr),len(lm)), dtype='complex_')
         for i, lm_i in enumerate(lm):
-            l = lm_i[0]
-            m = lm_i[1]
+            l = int(lm_i[0])
+            m = int(lm_i[1])
             factors = [1, 1j, -1, -1j]
             factor = factors[l % 4]          
-            # print(f'l={l}, m={m}')
+
+            # t0 = time.time()
+            Y_lm_r_jk = f_sh(l,m,r_jk_list[:,0],r_jk_list[:,1],r_jk_list[:,2]) # spherical harmonic
+            # t1 = time.time()
+            jl_qrb = spherical_jn(l, qrb) # Calculate the spherical Bessel function of the first kind for each qrb
+            jl_qr = jl_qrb[np.arange(len(qq))[:, None], bin_indices] # Map the results back to the full d_jk_list using advanced indexing
+            # jl_qr = spherical_jn(l, qr) # Calculate the spherical Bessel function of the first kind for each qr
+            # t2 = time.time()
+            S_q_lm[:,i] = factor * np.mean(jl_qr * Y_lm_r_jk, axis=1)
+            # t3 = time.time()
             
-            Y_lm_r_jk = f_sh(l,m,r_jk_list[:,2],r_jk_list[:,0],r_jk_list[:,1]) # spherical harmonic
-            for iq in range(int(nq)):
-                jl_qr = spherical_jn(l, qq[iq]*d_jk_list) # radial
-                S_q_lm[iq,i] = factor * np.mean(jl_qr * Y_lm_r_jk)
-                
+            # print("time for SH calculation = {}".format(t1-t0))
+            # print("time for j_l calculation = {}".format(t2-t1))
+            # print("time for S_q summing = {}".format(t3-t2))
+            
             if calculate_g_r == 1:
-                for ir in range(int(nr)):
-                    if ir == 0:
-                        continue
-                    index_r = (d_jk_list>rr[ir-1])&(d_jk_list<rr[ir])
-                    # n_r = np.sum(index_r)
-                    d_r = rr[ir]-rr[ir-1]
-                    g_r_lm[ir,i] = np.sum(Y_lm_r_jk[index_r])/d_r/((rr[ir]+rr[ir-1])/2)**2/4/np.pi
+                # for ir in range(1, int(nr)):
+                #     index_r = (d_jk_list>rr[ir-1])&(d_jk_list<rr[ir])
+                #     d_r = rr[ir]-rr[ir-1]
+                #     g_r_lm[ir,i] = np.sum(Y_lm_r_jk[index_r])/d_r/((rr[ir]+rr[ir-1])/2)**2/4/np.pi
+                d_r = rr[1]-rr[0]
+                index_d = (d_jk_list.flatten()//d_r).astype(int)
+                Y_lm_r_jk = Y_lm_r_jk[index_d<nr]
+                index_d = index_d[index_d<nr]
+                for id, index in enumerate(index_d):
+                    g_r_lm[index,i] += Y_lm_r_jk[id]
+                g_r_lm[:,i] = g_r_lm[:,i]/d_r/(rr-d_r/2)**2/4/np.pi/N_merge
+            # t4 = time.time()
+            # print("time for g_r = {}\n".format(t4-t3))
             
         self.S_q_lm = S_q_lm
         self.g_r_lm = g_r_lm
-
+            
     def scatter_direct_RSHE_old(self, qq, rr=[], n_merge=1, calculate_g_r=False):
         """
         Calculate scattering function. (new function available)
