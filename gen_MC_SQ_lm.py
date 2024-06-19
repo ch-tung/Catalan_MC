@@ -96,13 +96,14 @@ g_r_lm_list_param = []
 for kappa in kappa_list:
     for epsilon in epsilon_list:
         parameters_list.append([kappa, epsilon])
+        n_sample = 128
         
         # Chain stiffness
         chain.kappa = kappa
         chain.epsilon = epsilon
 
         S_q_lm_list, g_r_lm_list= eval_sq_SHE(kappa, epsilon, chain, qq, rr, lm,
-                                 n_sample = 128, n_merge = 1, rayleigh=True, calculate_g_r=True, real=True)
+                                 n_sample = n_sample, n_merge = 1, rayleigh=True, calculate_g_r=True, real=True)
         S_q_lm_list_param.append(S_q_lm_list)
         g_r_lm_list_param.append(g_r_lm_list)
         
