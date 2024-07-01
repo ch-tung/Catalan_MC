@@ -187,6 +187,7 @@ class WLChain:
         self.epsilon = 0
         self.f = 0
         self.grid = 'SC'
+        self.original_kappa = False
         
     def chain(self):
         """
@@ -259,10 +260,10 @@ class WLChain:
         # call 'chain_Rayleigh' function
         if self.apply_SA == 0:
             self.lc, self.Cc, self.n, self.Z, self.E_list = chain_grid_woSA(self.N,self.kappa,self.epsilon,self.lmbda,
-                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid)
+                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid,original_kappa=self.original_kappa)
         else:
             self.lc, self.Cc, self.n, self.Z, self.E_list = chain_grid(self.N,self.kappa,self.epsilon,self.lmbda,
-                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid)
+                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid,original_kappa=self.original_kappa)
             
         self.l_contour = np.sum(np.sqrt(np.sum(self.n**2,axis=0)))
         self.l_end2end = np.sqrt(np.sum((self.Cc[:,0]-self.Cc[:,-1])**2,axis=0))
@@ -280,10 +281,10 @@ class WLChain:
         # call 'chain_Rayleigh' function
         if self.apply_SA == 0:
             self.lc, self.Cc, self.n, self.Z = chain_grid_shear_woSA(self.N,self.kappa,self.epsilon,self.lmbda,
-                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid)
+                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid,original_kappa=self.original_kappa)
         else:
             self.lc, self.Cc, self.n, self.Z = chain_grid_shear(self.N,self.kappa,self.epsilon,self.lmbda,
-                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid)
+                                                              apply_SA=self.apply_SA,d_exc=self.d_exc,grid=self.grid,original_kappa=self.original_kappa)
             
         self.l_contour = np.sum(np.sqrt(np.sum(self.n**2,axis=0)))
         self.l_end2end = np.sqrt(np.sum((self.Cc[:,0]-self.Cc[:,-1])**2,axis=0))

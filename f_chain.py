@@ -72,7 +72,9 @@ def chain_Rayleigh(N, a, lambda_seg, unit_C, apply_SA=1, d_exc=1):
         abort = 0
         for i in range(N):
             if i==0:
-                n[:,i] = [1,0,0]
+                # n[:,i] = [1,0,0]
+                n_0 = np.random.rand(3)
+                n[:,i] = n_0/np.linalg.norm(n_0)
                 l[:,i] = n[:,i]
                 #B = np.eye(3)
                 #C = np.eye(3)
@@ -165,7 +167,9 @@ def chain_Rayleigh_woSA(N, a, lambda_seg, unit_C, apply_SA=0, d_exc=1):
         abort = 0
         for i in range(N):
             if i==0:
-                n[:,i] = [1,0,0]
+                # n[:,i] = [1,0,0]
+                n_0 = np.random.rand(3)
+                n[:,i] = n_0/np.linalg.norm(n_0)
                 l[:,i] = n[:,i]
                 #B = np.eye(3)
                 #C = np.eye(3)
@@ -248,7 +252,9 @@ def chain_fix_val_free_rot(N, a, lambda_seg, unit_C, apply_SA=1, d_exc=1):
         abort = 0
         for i in range(N):
             if i==0:
-                n[:,i] = [1,0,0]
+                # n[:,i] = [1,0,0]
+                n_0 = np.random.rand(3)
+                n[:,i] = n_0/np.linalg.norm(n_0)
                 l[:,i] = n[:,i]
                 #B = np.eye(3)
                 #C = np.eye(3)
@@ -341,7 +347,9 @@ def chain_fix_val_free_rot_woSA(N, a, lambda_seg, unit_C, apply_SA=0, d_exc=1):
         abort = 0
         for i in range(N):
             if i==0:
-                n[:,i] = [1,0,0]
+                # n[:,i] = [1,0,0]
+                n_0 = np.random.rand(3)
+                n[:,i] = n_0/np.linalg.norm(n_0)
                 l[:,i] = n[:,i]
                 #B = np.eye(3)
                 #C = np.eye(3)
@@ -457,7 +465,7 @@ def kappa_eff(l_p, grid, nonreverse=True):
     return kap_eff
 
 import random
-def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
+def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC', original_kappa=False):
     """
     Monte Carlo simulations of lattice models for polymer chains.
     
@@ -515,6 +523,8 @@ def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
         # E_phi = kappa/2*(sin_ij2[iz,:])
         # E_x = -epsilon*(cos_ij[0,:])
         kap_eff = kappa_eff(kappa,grid)
+        if original_kappa:
+            kap_eff = kappa
         E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
         E_x = -epsilon*(r_n[:,0])
         
@@ -593,7 +603,7 @@ def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
     
     return lc, Cc, n, Z, E_list
 
-def chain_grid_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=0, grid='SC'):
+def chain_grid_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=0, grid='SC', original_kappa=False):
     # d2_exc = d_exc**2
     i_diameter = int(np.ceil(np.pi/2*d_exc/lambda_seg))
     
@@ -614,6 +624,8 @@ def chain_grid_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=0, grid='SC
         # E_phi = kappa/2*(sin_ij2[iz,:])
         # E_x = -epsilon*(cos_ij[0,:])
         kap_eff = kappa_eff(kappa,grid)
+        if original_kappa:
+            kap_eff = kappa
         E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
         E_x = -epsilon*(r_n[:,0])
         
@@ -655,7 +667,7 @@ def chain_grid_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=0, grid='SC
     
     return lc, Cc, n, Z, E_list
 
-def chain_grid_shear(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
+def chain_grid_shear(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC', original_kappa=False):
     """
     Monte Carlo simulations of lattice models for polymer chains.
     
@@ -723,6 +735,8 @@ def chain_grid_shear(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='S
                     # E_phi = kappa/2*(sin_ij2[iz,:])
                     # E_x = -epsilon*(cos_ij[0,:])*l[1,i-1]
                     kap_eff = kappa_eff(kappa,grid)
+                    if original_kappa:
+                        kap_eff = kappa
                     E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
                     E_x = -epsilon*(r_n[:,0])*l[1,i-1]
                     
@@ -786,7 +800,7 @@ def chain_grid_shear(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='S
     
     return lc, Cc, n, Z
 
-def chain_grid_shear_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC'):
+def chain_grid_shear_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC', original_kappa=False):
     """
     Monte Carlo simulations of lattice models for polymer chains.
     
@@ -854,6 +868,8 @@ def chain_grid_shear_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, gr
                     # E_phi = kappa/2*(sin_ij2[iz,:])
                     # E_x = -epsilon*(cos_ij[0,:])*l[1,i-1]
                     kap_eff = kappa_eff(kappa,grid)
+                    if original_kappa:
+                        kap_eff = kappa
                     E_phi = kap_eff/2*((np.arccos(cos_ij[i,:]))**2)
                     E_x = -epsilon*(r_n[:,0])*l[1,i-1]
                     
