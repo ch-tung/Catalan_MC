@@ -188,6 +188,7 @@ class WLChain:
         self.f = 0
         self.grid = 'SC'
         self.original_kappa = False
+        self.F = np.eye(3)
         
     def chain(self):
         """
@@ -1140,4 +1141,6 @@ class WLChain:
             print('Self intersection detected! ({:d})'.format(n_intersection))
         else:
             print('No self intersection detected')
-        
+
+    def affine(self):
+        self.Cc = self.F@self.Cc

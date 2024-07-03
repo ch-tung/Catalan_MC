@@ -83,13 +83,14 @@ if __name__ == '__main__':
     lambda_backbone = 1
 
     # Affine deformation matrix
-    F = np.array([[1,0,0],[0,1,0],[0,0,1]])
+    F = np.array([[1,0,1],[0,1,0],[0,0,1]])
 
     # Call WLChain class
     chain = WLChain(N_backbone,a_backbone,lambda_backbone,unit_C)
     chain.apply_SA = 1
     chain.d_exc = 0.1
     chain.f = 0.0
+    chain.F = F
 
     # Q points, QL/2pi = 0.1 to 1000
     n_q = 101

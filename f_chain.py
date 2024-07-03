@@ -428,11 +428,32 @@ def grid_coords(grid):
                           12,13,14,
                           6,7,8])
         
+    if grid=='TH':
+        # tetrahedron
+        r_n = np.array([[1,1,1],[-1,1,1],[1,-1,1],[1,1,-1]])
+        r_n = np.array([points/np.sqrt(np.sum(points**2)) for points in r_n])
+        r_opp = np.array([])
+
+    if grid=='OH':
+        # tetrahedron
+        r_n = np.array([[1,1,1],[-1,1,1],[1,-1,1],[1,1,-1],[1,-1,-1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]])
+        r_n = np.array([points/np.sqrt(np.sum(points**2)) for points in r_n])
+        r_opp = np.array([7,4,5,6,3,2,1,0])
+
+    if grid=='OHTH':
+        # tetrahedron
+        r_n = np.array([[1,1,1],[-1,1,1],[1,-1,1],[1,1,-1],[1,-1,-1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]])
+        r_n = np.array([points/np.sqrt(np.sum(points**2)) for points in r_n])
+        cos_ij = r_n@r_n.T
+        r_opp = np.array([[x[0] for x in np.argwhere(cos_ij[i,:]<0)]+[i] for i in range(len(cos_ij))])
+        
     return r_n, r_opp
 
 def kappa_eff(l_p, grid, nonreverse=True):
-    r_n, r_opp = grid_coords(grid)
+    r_n, _ = grid_coords(grid)
     cos_i1 = r_n@r_n[0].T
+    cos_i1[cos_i1>1]=1
+    cos_i1[cos_i1<-1]=-1
     theta_i1 = np.arccos(cos_i1)
 
     def f_average(x, kappa):
@@ -453,7 +474,7 @@ def kappa_eff(l_p, grid, nonreverse=True):
         f_ave = f_average
 
     cos_ave = np.array([f_ave(cos_i1, k) for k in kappa_list])
-    sigma = 1e-12
+    sigma = 1e-18
     lp_ave_list = -1/(np.log(cos_ave)-sigma)
 
     # obtain the corresponding kappa_eff from interpolation
@@ -463,6 +484,38 @@ def kappa_eff(l_p, grid, nonreverse=True):
     kap_eff = np.interp(l_p, lp_ave_list[i_finite], kappa_list[i_finite])
 
     return kap_eff
+
+def lp_kappa(kappa, grid, nonreverse=True):
+    r_n, _ = grid_coords(grid)
+    cos_i1 = r_n@r_n[0].T
+    cos_i1[cos_i1>1]=1
+    cos_i1[cos_i1<-1]=-1
+    theta_i1 = np.arccos(cos_i1)
+
+    def f_average(x, kappa):
+        # x(theta) is a fumction of theta
+        x_ave = np.sum(x*np.exp(-kappa/2*theta_i1**2))/np.sum(np.exp(-kappa/2*theta_i1**2))
+        return x_ave
+
+    def f_average_nonrev(x, kappa):
+        # x(theta) is a fumction of theta
+        x_ave = np.sum((x*np.exp(-kappa/2*theta_i1**2))[cos_i1>-1])/np.sum(np.exp(-kappa/2*theta_i1**2)[cos_i1>-1])
+        return x_ave
+    
+    # get the relation between bending energy and chain persistence
+    kappa_list = np.logspace(-2,2,200)
+    if nonreverse:
+        f_ave = f_average_nonrev
+    else:
+        f_ave = f_average
+
+    sigma = 1e-18
+
+    # obtain the corresponding kappa_eff from interpolation
+    lp_kappa = -1/(np.log(f_ave(cos_i1, kappa))-sigma)
+
+    return lp_kappa
+
 
 import random
 def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC', original_kappa=False):
@@ -510,6 +563,8 @@ def chain_grid(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='SC', or
     r_n, r_opp = grid_coords(grid)
     
     cos_ij = r_n@r_n.T
+    cos_ij[cos_ij>1]=1
+    cos_ij[cos_ij<-1]=-1
     sin_ij2 = 1-cos_ij**2
     
     n = np.zeros((3,N))
@@ -611,6 +666,8 @@ def chain_grid_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=0, grid='SC
     r_n, r_opp = grid_coords(grid)
     
     cos_ij = r_n@r_n.T
+    cos_ij[cos_ij>1]=1
+    cos_ij[cos_ij<-1]=-1
     sin_ij2 = 1-cos_ij**2
     
     n = np.zeros((3,N))
@@ -712,6 +769,8 @@ def chain_grid_shear(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, grid='S
     r_n, r_opp = grid_coords(grid)
     
     cos_ij = r_n@r_n.T
+    cos_ij[cos_ij>1]=1
+    cos_ij[cos_ij<-1]=-1
     sin_ij2 = 1-cos_ij**2
     
     n = np.zeros((3,N))
@@ -845,6 +904,8 @@ def chain_grid_shear_woSA(N, kappa, epsilon, lambda_seg, apply_SA=1, d_exc=1, gr
     r_n, r_opp = grid_coords(grid)
     
     cos_ij = r_n@r_n.T
+    cos_ij[cos_ij>1]=1
+    cos_ij[cos_ij<-1]=-1
     sin_ij2 = 1-cos_ij**2
     
     n = np.zeros((3,N))

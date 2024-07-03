@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from scipy.io import savemat, loadmat
 
 # %%
-def eval_sq_SHE(kappa, epsilon, chain, qq, rr, lm=[(0,0),(2,0),(4,0)], n_sample = 20, n_merge = 4, rayleigh=False, calculate_g_r=False, real=True):
+def eval_sq_SHE(kappa, epsilon, chain, qq, rr, lm=[(0,0),(2,0),(2,2),(2,-2)], n_sample = 20, n_merge = 4, rayleigh=False, calculate_g_r=False, real=True):
     ## generate spectra of three different grids
     S_q_lm_list = []
     g_r_lm_list = []
@@ -30,6 +30,7 @@ def eval_sq_SHE(kappa, epsilon, chain, qq, rr, lm=[(0,0),(2,0),(4,0)], n_sample 
             chain.epsilon = epsilon
 
             chain.chain_grid()
+            chain.affine()
             N = chain.N
             chain_box = chain.box
             
@@ -48,6 +49,7 @@ def eval_sq_SHE(kappa, epsilon, chain, qq, rr, lm=[(0,0),(2,0),(4,0)], n_sample 
         chain.a = kappa
         for j in trange(n_sample):
             chain.chain()
+            chain.affine()
             chain.scatter_direct_SHE(qq, rr, lm, n_merge=n_merge, calculate_g_r=calculate_g_r, real=real)
             S_q_lm_i = S_q_lm_i + chain.S_q_lm 
             g_r_lm_i = g_r_lm_i + chain.g_r_lm 
@@ -74,11 +76,15 @@ a_backbone = 1
 # Unit persistence
 lambda_backbone = 1
 
+# Affine deformation matrix
+F = np.array([[1,0,1],[0,1,0],[0,0,1]])
+
 # Call WLChain class
 chain = WLChain(N_backbone,a_backbone,lambda_backbone,unit_C)
 chain.apply_SA = 1
 chain.d_exc = 0.1
 chain.f = 0.0
+chain.F = F
 
 kappa_list = np.array([5])
 epsilon_list = [0]
@@ -88,7 +94,7 @@ n_r = 51
 qq = (np.logspace(-1,3,n_q))/N_backbone
 rr = (np.arange(n_r))*2
 
-lm=[(0,0),(2,0),(4,0),(6,0)]
+lm=[(0,0),(2,0),(2,2),(2,-2)]
 
 parameters_list = []
 S_q_lm_list_param = []
@@ -109,5 +115,5 @@ for kappa in kappa_list:
         
         S_q_lm_list_param = np.array(S_q_lm_list_param)
         g_r_lm_list_param = np.array(g_r_lm_list_param)
-        mdic = {"S_q_lm_list_param":S_q_lm_list_param, "g_r_lm_list_param":g_r_lm_list_param, "qq":qq, "rr":rr, "parameters_list":parameters_list}
-        savemat("sq_lm_{}_{}_{}.mat".format(n_sample,kappa,epsilon),mdic)
+        mdic = {"S_q_lm_list_param":S_q_lm_list_param, "g_r_lm_list_param":g_r_lm_list_param, "qq":qq, "rr":rr, "parameters_list":parameters_list,"lm":lm}
+        savemat("sq_lm_xz_1.0_{}_{}_{}.mat".format(n_sample,kappa,epsilon),mdic)
