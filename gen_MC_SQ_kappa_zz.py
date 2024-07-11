@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     # Q points, QL/2pi = 0.1 to 1000
     n_q = 101
-    qq = 2*np.pi*(np.logspace(-1,3,n_q))/N_backbone
+    qq = (np.logspace(-1,3,n_q))/N_backbone
 
     parameters_list = []
     S_q_list_param = []

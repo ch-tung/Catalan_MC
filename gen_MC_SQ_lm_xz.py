@@ -86,7 +86,7 @@ chain.d_exc = 0.1
 chain.f = 0.0
 chain.F = F
 
-kappa_list = np.array([5])
+kappa_list = np.array([50])
 epsilon_list = [0]
 
 n_q = 41
@@ -94,7 +94,7 @@ n_r = 51
 qq = (np.logspace(-1,3,n_q))/N_backbone
 rr = (np.arange(n_r))*2
 
-lm=[(0,0),(2,0),(2,2),(2,-2)]
+lm=[(0,0),(2,0),(2,2),(2,-2),(4,0),(4,-2),(4,-4),(4,2),(4,4)]
 
 parameters_list = []
 S_q_lm_list_param = []
@@ -102,7 +102,7 @@ g_r_lm_list_param = []
 for kappa in kappa_list:
     for epsilon in epsilon_list:
         parameters_list.append([kappa, epsilon])
-        n_sample = 128
+        n_sample = 512
         
         # Chain stiffness
         chain.kappa = kappa
