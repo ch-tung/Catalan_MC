@@ -1,6 +1,7 @@
 # Catalan_MC
 
 A Python-based project focused on generating Worm-Like Chain (WLC) model trajectories for the study of polymer physics, specifically in the context of the lattice Monte Carlo simulations.
+![Catalan_MC](https://socialify.git.ci/ch-tung/Catalan_MC/image?description=1&font=Inter&language=1&name=1&owner=1&pattern=Solid&theme=Light)
 
 ## Features
 
